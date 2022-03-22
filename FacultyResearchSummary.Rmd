@@ -1,0 +1,207 @@
+---
+title: "Citation Graphs"
+toc: true
+---
+
+```{r setup, echo = F,include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(tidyverse, scholar, here)
+```
+
+## Department Citations Overview
+
+The following are a series of graphs that provide an overview about citation rates from research performed by the Department. They are derived from Google Scholar, and as a result, do not include members of the department who do not have Google Scholar profiles. Ids were found by manually searching Google Scholar against current faculty listed on the Department's Website. The following faculty members do not have profiles on Google Scholar: Desmond Jagmohan, Daniel Lee, Kinch Hoekstra, Terri Bimes, Steven Vogel, Jonah Levy, Martha Wilfahrt, and Pradeep K. Chhibber.
+
+Publications drawn from Google Scholar are further processed to remove duplicates, working papers, conference papers, and other work that has not been formally published. Google Scholar "uses automated software, known as 'robots' or "crawlers", to fetch your files for inclusion in the search results. It operates similarly to regular Google search" (Google Scholar n.d).
+
+```{r, echo = F}
+## Load and clean citation data 
+rawFacultyPubs <- read_csv(here("data/facultyPubsSemiClean.csv"),show_col_types = FALSE)
+
+### Add manual Robert Powell Data
+bobPubs <- read_csv(here("data/bobPubs.csv"), show_col_types = F)%>%
+  mutate(cid = row_number())
+
+facultyPubs <- bind_rows(bobPubs,rawFacultyPubs)%>%
+  ## Drop Meetings and ""
+  filter(journal != "")%>%
+  ## Drop working Papers
+  ## This filter is the result of an extended manual inspection
+  ## The goal is to exclude duplicates, working papers, codebooks, policy papers
+  filter(
+    !grepl(
+      "Arxiv|Ssrn|Working Paper|Varieties Of Democracy|V-Dem|V-dem|Apsa|Mimeo|Association Of Academic Health Centers|Testing Theories Of Social Exclusion And Intergroup|Uc Berkeley Rhetoric Colloquium|Machines versus humans: The counting and|University Of California, Berkeley|Westminster Model Of Democracy In Crisis|Massachusetts Institute of|London School of Economics and|Annual Meeting|Na|Conference|Voxeu|Blog|Undergraduate|Symposium|Socarx|Egap Experimental Design Registry|Preprint|Url: Https://Doi. Org/|Manuscript|Discussion|(Princeton, Nj:)|Osf|Stanford University Graduate School Of Business|Uc Berkeley|Computer File",journal))%>%
+  distinct(cid, .keep_all = TRUE)
+```
+
+## Faculty Publications in Top Journals
+
+Berkeley faculty have been consistently successful in placing work in top academic journals. This set of graphs shows the department record over time. The top journals included are: "American Political Science Review", "American Journal Of Political Science","Journal Of Politics", "International Organization", "Comparative Political Studies", "Political Analysis", "PNAS", "Science", "British Journal Of Political Science","The Journal Of Politics", "The British Journal of Political Science", "World Politics", "Quarterly Journal of Economics", and the "American Economic Review"
+
+```{r,echo =F, warning = F, message=F}
+### Top Journals Summary 
+journals <- tibble(
+  journal = c("American Political Science Review", "American Journal Of Political Science","Journal Of Politics", "International Organization", "Comparative Political Studies", "Political Analysis", "PNAS", "Science", "British Journal Of Political Science","The Journal Of Politics", "The British Journal of Political Science", "World Politics", "Quarterly Journal of Economics", "American Economic Review"),
+  abb = c("APSR", "AJPS","JOP","IO", "CPS", "PA", "PNAS", "Science", "BJPS", "JOP", "BJPS", "WP", "QJE", "AER"))
+
+facultyPubs %>%
+  left_join(journals)%>%
+  filter(!is.na(abb))%>%
+  group_by(abb)%>%
+  count()%>%
+  ggplot(aes(x = reorder(abb, -n), y = n))+
+  geom_col()+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 90))+
+  xlab("Journal")+
+  ylab("Number of Faculty Publications")+
+  ggtitle("Current Faculty have published 165 Articles in top Journals",
+          subtitle = "Faculty have published 102 articles in the top 3 political science journals")
+```
+
+We can also break down these publication by faculty member. The department has a wide number of faculty publishing in top journals.
+
+```{r, echo = F}
+### Faculty Publications in Top Journals 
+facultyPubs %>%
+  left_join(journals)%>%
+  filter(!is.na(abb))%>%
+  group_by(Name)%>%
+  count(abb)%>%
+  summarise(n = sum(n))%>%
+  ggplot(aes(x = reorder(Name, -n), y = n))+
+  geom_col()+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 90))+
+  xlab("Journal")+
+  ylab("Number of Faculty Publications")+
+  ggtitle("Faculty Members Across Subfields have Published in Top Journals") 
+```
+
+## Recent Research
+
+Citations accumulate over time. To limit this possibility, we can look at all publications and citations from 2010 onwards. The department's work over the last decade is well cited.
+
+```{r, echo = F, warning = F, message = F}
+### Publications since 2010 
+facultyPubs %>% 
+  filter(year >= 2010, year < 2022)%>%
+  group_by(year)%>%
+  summarise(cites = sum(cites), .groups ="drop_last")%>%
+  ggplot(aes(x = reorder(year, -cites),y = cites))+
+  geom_col()+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 90))+
+  xlab("Publication Year")+
+  ylab("Total Citations")+
+  ggtitle("Faculty Research Published 2010-2021 is well cited",subtitle = "Research includes articles, books, and book chapters")
+```
+
+Note that the previous graph is ordered by top citations instead of years. We can plot the same information keeping the years in order.
+
+```{r, echo = F}
+### Same graph but without reordering years 
+facultyPubs %>% 
+  filter(year >= 2010, year < 2022)%>%
+  group_by(year)%>%
+  summarise(cites = sum(cites), .groups ="drop_last")%>%
+  ggplot(aes(x = year,y = cites))+
+  geom_col()+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 90))+
+  xlab("Publication Year")+
+  ylab("Total Citations")+
+  ggtitle("Faculty Research Published 2010-2021 is well cited",subtitle = "Research includes articles, books, and book chapters")
+```
+
+We can also break this information down by faculty member.
+
+```{r, echo = F}
+### Publications Since 2010 broken down by faculty member
+facultyPubs %>%
+  filter(year >= 2010, year < 2022)%>%
+  group_by(Name)%>%
+  summarise(cites = sum(cites), .groups = "drop_last")%>%
+  ggplot(aes(x = reorder(Name, -cites),y = cites))+
+  geom_col()+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 90))+
+  xlab("Faculty Member")+
+  ylab("Total Citations")+
+  ggtitle("Faculty Across Subfields have been cited widely",subtitle = "Research includes articles, books, and book chapters")
+```
+
+## Field Defining Work.
+
+Measuring the contributions of research can be challenging. To create a baseline, we looked at all work that received at least 200 citations.
+
+```{r, echo = F}
+## Article should have at least 200 citations 
+facultyPubs %>%
+  filter(cites >=200)%>%
+  group_by(Name)%>%
+  summarise(total = n())%>%
+  ungroup()%>%
+  ggplot(aes(x = reorder(Name,-total), y = total))+
+  geom_col()+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 90))+
+  xlab("Faculty Member")+
+  ggtitle("Faculty Publications with at least 200 citations", subtitle = "Research includes articles, books, and book chapters")
+```
+
+Similarly we can look at the rate at which faculty publish work that is heavily cited. A simplified "hit rate" considers the percentage of publications that have at least 200 citations among faculty members with at least ten publications.
+
+```{r, echo = F}
+### 200 cite hit rate 
+facultyPubs %>% 
+  mutate(atLeast200 = if_else(cites >= 200, 1,0))%>%
+  group_by(Name)%>%
+  mutate(totalPubs = n())%>%
+  filter(totalPubs >=10)%>%
+  summarise(hitRate = sum(atLeast200)/totalPubs, .groups = "drop_last")%>%
+  distinct()%>%
+  filter(hitRate > 0)%>%
+  ggplot(aes(x = reorder(Name, -hitRate), y = hitRate))+
+  geom_col()+theme_minimal()+
+  theme(axis.text.x = element_text(angle = 90))+
+  xlab("Faculty Member")+
+  ylab("% Articles with at least 200 citations")+
+  ggtitle("Faculty Research High Impact as a Percentage of all Research (min 10 publications)", subtitle = "Research includes articles, books, and book chapters")
+```
+
+## Works
+
+The following two data frames provide single authored works with at least 750 or 1000 citations. These works generally exclude work that is not published.
+
+### Publications with at least 750 citations
+
+```{r, echo=FALSE}
+singlePubs750 <- facultyPubs %>% 
+  filter(cites >= 750)%>%
+  select(Name, title, journal, cites, year)%>%
+  arrange(desc(cites))
+
+knitr::kable(singlePubs750, format = "html")%>%
+  kableExtra::kable_styling(full_width = T)
+
+# If you want the latex code for these 
+# uncomment the following line
+#knitr::kable(singlePubs750, format = "html")
+```
+
+### Publications with at least 1000 Citations
+
+```{r, echo = FALSE}
+singlePubs1000 <- facultyPubs  %>%
+  filter(cites >= 1000)%>%
+  select(Name, title, journal, cites, year)%>%
+  arrange(desc(cites))
+
+knitr::kable(singlePubs1000, format = "html")%>%
+  kableExtra::kable_styling(full_width = T)
+
+# If you want the latex code for these 
+# uncomment the following line
+# knitr::kable(singlePubs1000, format = "latex")
+```

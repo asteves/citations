@@ -1,0 +1,264 @@
+---
+title: "Citation Cleaning"
+author: "Alex Stephenson"
+date: '2022-03-22'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(tidyverse, scholar, cld3)
+```
+
+## Google Scholar Metrics 
+
+
+```{r, echo = F}
+berkeley_ids <-
+  c(
+    "IdAMXPUAAAAJ",
+    "Vf9sEI8AAAAJ",
+    "8AcpSXsAAAAJ",
+    "2n_vv-8AAAAJ",
+    "odF2zi8AAAAJ",
+    "nM0pckgAAAAJ",
+    "ewHcST4AAAAJ",
+    "WEyR-hoAAAAJ",
+    "VKW9xscAAAAJ",
+    "zZVlQhUAAAAJ",
+    "1bzrc6QAAAAJ",
+    "rUbMAvcAAAAJ",
+    "1n3IoT0AAAAJ",
+    "wbdHe8EAAAAJ",
+    "V8V_ng8AAAAJ",
+    "tXPMZy8AAAAJ",
+    "Ifl1VQEAAAAJ",
+    "LnUkxkoAAAAJ",
+    "dWfSuy8AAAAJ",
+    "JrC7tW0AAAAJ",
+    "STR-3uwAAAAJ",
+    "QiBjHnIAAAAJ",
+    "dMBpn60AAAAJ",
+    "rqtCpCYAAAAJ",
+    "s5N2vJUAAAAJ",
+    "ev6k-gIAAAAJ",
+    "wRBH-rEAAAAJ&hl",
+    "BTTkhXwAAAAJ"
+  )
+
+## Get faculty names
+names <- vector(mode = "logical", length = length(berkeley_ids))
+for (i in 1:length(berkeley_ids)) {
+  names[i] <- get_profile(berkeley_ids[i])$name
+}
+
+## Make lookup table for faculty
+faculty <- tibble(facultyMember = names,
+                  googleScholarId = berkeley_ids)%>%
+  mutate(facultyMember = str_to_title(facultyMember))
+
+## Get all publications for Faculty members
+publicationList <-
+  vector(mode = "list", length = length(berkeley_ids))
+
+get_pubs_w_name <- function(id) {
+  return(get_publications(id) %>% dplyr::mutate(googleScholarId = {
+    {
+      id
+    }
+  }))
+}
+for (i in 1:length(berkeley_ids)) {
+  publicationList[i][[1]] <- get_publications(berkeley_ids[i]) %>%
+    mutate(googleScholarId = berkeley_ids[i])
+}
+
+
+## Get just Amy Lerman 
+amyPubs <- get_publications("BTTkhXwAAAAJ")%>%
+  mutate(googleScholarId = "BTTkhXwAAAAJ",
+         Name = "Amy E. Lerman",
+         journal = str_replace_all(journal, "Punishment and$", ""))
+
+
+pubList <- lapply(berkeley_ids, get_pubs_w_name)
+publications <- bind_rows(publicationList)
+
+
+## Clean up publications
+facultyPublications <- publications %>%
+  filter(!is.na(year),!is.na(cid), year > 1978)
+
+articles <- faculty %>%
+  left_join(facultyPublications) %>%
+  filter(title != "Britain after Brexit: A nation divided")%>%
+  select(googleScholarId, pubid)
+  
+## Clean publications 
+topPubs <- publications2 %>%
+  # Bad publication join by google
+  filter(title != "Britain after Brexit: A nation divided")%>%
+  group_by(googleScholarId) %>%
+  ## Clean up names
+  mutate(
+    journal = str_replace_all(journal, "^[:space:]", NA_character_),
+    journal = str_to_title(journal) %>% trimws(),
+    journal = str_replace_all(journal, "Univ ", "University "),
+    journal = str_replace_all(journal, "&", "And"),
+    journal = str_replace_all(journal, "New York:", "")%>%trimws(),
+    journal = str_replace_all(journal, "Am. Pol. Science Rev.", "American Politcal Science Review"),
+    journal = str_replace_all(journal, "Comp. Pol. Stud.", "Comparative Politics Studies"),
+    journal = str_replace_all(journal, "E. Eur. Const. Rev.","Eastern European Constitutional Review"),
+    
+    ## Fix some press issues
+    journal = case_when(
+      str_detect(journal, "Unpublished") ~ "Working Paper",
+      str_detect(journal, "Nueva") ~ "Cambridge University Press",
+      str_detect(journal, "Brookings Inst Press") ~ "Brookings Institution Press",
+      str_detect(journal, "Proceedings Of The National Academy Of Sciences")~"PNAS",
+      ## Princeton University Press doesn't seem
+      ## to show up often
+      str_detect(
+        journal,
+        "Filibuster|Disjointed Pluralism|Racial Realign|Politics In Time|Democracy From Scratch"
+      ) ~ "Princeton University Press",
+      str_detect(journal, "Cq Press") ~ "CQ Press",
+      ## Cornell also has this problem
+      str_detect(
+        journal,
+        "Intimate Violence|War On Sacred Grounds|Religion On The Battlefield|Institutional Designs For A Complex World"
+      ) ~ "Cornell University Press",
+      str_detect(journal, "Oup |Costs Of Democracy. Political Finance In India") ~
+        "Oxford University Press",
+      str_detect(journal, "Univ Of Wisconsin Press") ~ "University of Wisconsin Press",
+      str_detect(journal, "Foreign Aff.") ~ "Foreign Affairs",
+      str_detect(
+        journal,
+        "Chapter Prepared For The Oxford Handbook Of Public Accountability"
+      ) ~ "Oxford Handbook Of Public Accountability",
+      str_detect(journal, "Regime Creation And The") ~ "Palgrave Macmillion",
+      str_detect(journal, "Asia’s New Institutional Architecture") ~ "Springer",
+      str_detect(journal, "Election Fraud: Detecting And Deterring Electoral") ~
+        "Brookings Institution Press",
+      str_detect(journal, "Voting In Fear: Electoral Violence In Sub-Saharan") ~
+        "United States Institute of Peace",
+      str_detect(journal, "Religion, Identity And Global Governance") ~ "University of Toronto Press",
+      str_detect(journal, "Political Science: The State Of The Discipline") ~
+        "W.W. Norton",
+      str_detect(journal, "Sage") ~ "Sage",
+      str_detect(journal, "Harvard University") ~ "Harvard University Press",
+      str_detect(journal, "National Bureau Of Economic Research") ~ "American Political Science Review",
+      str_detect(journal, "The Journal Of Political Philosophy, Doi:") ~ "The Journal Of Political Philosophy",
+      str_detect(journal, "The Discovery Of The Fact") ~ "University of Michigan Press",
+      str_detect(journal, "Partisan Hearts And Minds") ~ "Yale University Press",
+      str_detect(journal, "Elements In Quantitative And Computational") ~ "Cambridge University Press",
+      str_detect(journal, "Culture Matters: How Values Shape Human Progress") ~
+        "Basic Books",
+      str_detect(journal, "Greed, Corruption, And The Modern State") ~ "Edward Elgar",
+      str_detect(journal, "Advances In Experimental Political Science")~"Cambridge University Press",
+      str_detect(journal, "^Journal of Politics")~"The Journal of Politics",
+      str_detect(journal, "Good Enough for Government Work")~"University of Chicago Press",
+      str_detect(journal, "Public Opinion And Constitutional Controversy")~"Sage",
+      TRUE ~ journal
+    ),
+    journal = str_replace_all(journal, "^Journal Of Politics", "The Journal Of Politics")
+  ) %>%
+  ## Drop Meetings and ""
+  filter(journal != "")%>%
+  ## Drop working Papers
+  ## This filter is the result of an extended manual inspection
+  ## The goal is to exclude duplicates, working papers, codebooks, policy papers
+  filter(
+    !grepl(
+      "Arxiv|Ssrn|Working Paper|Varieties Of Democracy|V-Dem|V-dem|Apsa|Mimeo|Association Of Academic Health Centers|Testing Theories Of Social Exclusion And Intergroup|Uc Berkeley Rhetoric Colloquium|Machines versus humans: The counting and|University Of California, Berkeley|Westminster Model Of Democracy In Crisis|Massachusetts Institute of|London School of Economics and|Annual Meeting|Na|Conference|Voxeu|Blog|Undergraduate|Symposium|Socarx|Egap Experimental Design Registry|Preprint|Url: Https://Doi. Org/|Manuscript|Discussion|(Princeton, Nj:)",
+      journal
+    )
+  )%>%
+  filter(title != "I is increasingly common for social scientists to")%>%
+  distinct(cid, .keep_all = TRUE)
+
+topPubs <- topPubs %>% select(-Name)
+facultyStats <- faculty %>%
+  left_join(topPubs) %>%
+  rename(Name = facultyMember) %>%
+  arrange(Name, desc(cites))
+```
+
+```{r, echo =F, warning = F, message=F}
+### Top Journals Summary 
+journals <- tibble(
+  journal = c("American Political Science Review", "American Journal Of Political Science","Journal Of Politics", "International Organization", "Comparative Political Studies", "Political Analysis", "PNAS", "Science", "British Journal Of Political Science","The Journal Of Politics", "The British Journal of Political Science", "World Politics"),
+  abb = c("APSR", "AJPS","JOP","IO", "CPS", "PA", "PNAS", "Science", "BJPS", "JOP", "BJPS", "WP"))
+
+facultyStats %>%
+  left_join(journals)%>%
+  filter(!is.na(abb))%>%
+  group_by(abb)%>%
+  count()%>%
+  ggplot(aes(x = reorder(abb, -n), y = n))+
+  geom_col()+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 90))+
+  xlab("Journal")+
+  ylab("Number of Faculty Publications")+
+  ggtitle("Current Faculty have published 147 Articles in top Journals",
+          subtitle = "Faculty have published 99 articles in the top 3 political science journals")
+```
+
+```{r, echo = F, warning = F, message = F}
+### Publications since 2017 
+facultyStats %>% 
+  filter(year >= 2010, year < 2022)%>%
+  group_by(year)%>%
+  summarise(cites = sum(cites), .groups ="drop_last")%>%
+  ggplot(aes(x = reorder(year, -cites),y = cites))+
+  geom_col()+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 90))+
+  xlab("Publication Year")+
+  ylab("Total Citations")+
+  ggtitle("Faculty Research Published 2010-2021 is well cited",subtitle = "Research includes articles, books, and book chapters")
+
+### Publications Since 2017 broken down by faculty  
+facultyStats %>%
+  filter(year >= 2010, year < 2022)%>%
+  group_by(Name)%>%
+  summarise(cites = sum(cites), .groups = "drop_last")%>%
+  ggplot(aes(x = reorder(Name, -cites),y = cites))+
+  geom_col()+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 90))+
+  xlab("Faculty Member")+
+  ylab("Total Citations")+
+  ggtitle("Faculty Research Published 2010-2021 is well cited",subtitle = "Research includes articles, books, and book chapters")
+
+### Field Defining 
+## Article should have at least 300 citations 
+facultyStats %>%
+  filter(cites >=500)%>%
+  group_by(Name)%>%
+  summarise(total = n())%>%
+  ungroup()%>%
+  ggplot(aes(x = reorder(Name,-total), y = total))+
+  geom_col()+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 90))+
+  xlab("Faculty Member")+
+  ggtitle("Faculty Publications with at least 500 citations", subtitle = "Research includes articles, books, and book chapters")
+
+### 500 cite hit rate 
+facultyStats %>% 
+  mutate(atLeast200 = if_else(cites >= 200, 1,0))%>%
+  group_by(Name)%>%
+  mutate(totalPubs = n())%>%
+  filter(totalPubs >=10)%>%
+  summarise(hitRate = sum(atLeast200)/totalPubs, .groups = "drop_last")%>%
+  distinct()%>%
+  filter(hitRate > 0)%>%
+  ggplot(aes(x = reorder(Name, -hitRate), y = hitRate))+
+  geom_col()+theme_minimal()+
+  theme(axis.text.x = element_text(angle = 90))+
+  xlab("Faculty Member")+
+  ylab("% Articles with at least 200 citations")+
+  ggtitle("Faculty Research High Impact as a Percentage of all Research (min 10 publications)", subtitle = "Research includes articles, books, and book chapters")
+```
