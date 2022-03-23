@@ -1,6 +1,5 @@
 ---
 title: "Citation Graphs"
-toc: true
 ---
 
 ```{r setup, echo = F,include=FALSE}
@@ -61,7 +60,7 @@ facultyPubs %>%
 
 We can also break down these publication by faculty member. The department has a wide number of faculty publishing in top journals.
 
-```{r, echo = F}
+```{r, echo = F, warning =F, message = F}
 ### Faculty Publications in Top Journals 
 facultyPubs %>%
   left_join(journals)%>%
@@ -73,7 +72,7 @@ facultyPubs %>%
   geom_col()+
   theme_minimal()+
   theme(axis.text.x = element_text(angle = 90))+
-  xlab("Journal")+
+  xlab("Faculty Member")+
   ylab("Number of Faculty Publications")+
   ggtitle("Faculty Members Across Subfields have Published in Top Journals") 
 ```
@@ -99,7 +98,7 @@ facultyPubs %>%
 
 Note that the previous graph is ordered by top citations instead of years. We can plot the same information keeping the years in order.
 
-```{r, echo = F}
+```{r, echo = F, warning = F, message = F}
 ### Same graph but without reordering years 
 facultyPubs %>% 
   filter(year >= 2010, year < 2022)%>%
@@ -116,7 +115,7 @@ facultyPubs %>%
 
 We can also break this information down by faculty member.
 
-```{r, echo = F}
+```{r, echo = F, warning = F, message = F}
 ### Publications Since 2010 broken down by faculty member
 facultyPubs %>%
   filter(year >= 2010, year < 2022)%>%
@@ -135,7 +134,7 @@ facultyPubs %>%
 
 Measuring the contributions of research can be challenging. To create a baseline, we looked at all work that received at least 200 citations.
 
-```{r, echo = F}
+```{r, echo = F, warning = F, message = F}
 ## Article should have at least 200 citations 
 facultyPubs %>%
   filter(cites >=200)%>%
@@ -152,7 +151,7 @@ facultyPubs %>%
 
 Similarly we can look at the rate at which faculty publish work that is heavily cited. A simplified "hit rate" considers the percentage of publications that have at least 200 citations among faculty members with at least ten publications.
 
-```{r, echo = F}
+```{r, echo = F, warning = F, message = F}
 ### 200 cite hit rate 
 facultyPubs %>% 
   mutate(atLeast200 = if_else(cites >= 200, 1,0))%>%
@@ -176,7 +175,7 @@ The following two data frames provide single authored works with at least 750 or
 
 ### Publications with at least 750 citations
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, warning = F, message = F}
 singlePubs750 <- facultyPubs %>% 
   filter(cites >= 750)%>%
   select(Name, title, journal, cites, year)%>%
@@ -192,7 +191,7 @@ knitr::kable(singlePubs750, format = "html")%>%
 
 ### Publications with at least 1000 Citations
 
-```{r, echo = FALSE}
+```{r, echo = FALSE, warning = F, message = F}
 singlePubs1000 <- facultyPubs  %>%
   filter(cites >= 1000)%>%
   select(Name, title, journal, cites, year)%>%
