@@ -182,13 +182,13 @@ singlePubs750 <- facultyPubs %>%
   select(Name, title, journal, cites, year)%>%
   arrange(desc(cites))
 
-#knitr::kable(singlePubs750, format = "html")%>%
-#  kableExtra::kable_styling(full_width = T)
+knitr::kable(singlePubs750, format = "html")%>%
+ kableExtra::kable_styling(full_width = T)
 
 # If you want the latex code for these 
 # uncomment the following line
-knitr::kable(singlePubs750, format = "latex")%>%
-  kableExtra::kable_styling(latex_options = "HOLD_position")
+# knitr::kable(singlePubs750, format = "latex")%>%
+#   kableExtra::kable_styling(latex_options = "HOLD_position")
 
 ```
 
@@ -200,11 +200,11 @@ singlePubs1000 <- facultyPubs  %>%
   select(Name, title, journal, cites, year)%>%
   arrange(desc(cites))
 
-#knitr::kable(singlePubs1000, format = "html")%>%
-#  kableExtra::kable_styling(full_width = T)
+knitr::kable(singlePubs1000, format = "html")%>%
+ kableExtra::kable_styling(full_width = T)
 
 # If you want the latex code for these 
 # uncomment the following line
-knitr::kable(singlePubs1000, format = "latex")%>%
-  kableExtra::kable_styling(latex_options = "HOLD_position")
+# knitr::kable(singlePubs1000, format = "latex")%>%
+#   kableExtra::kable_styling(latex_options = "HOLD_position")
 ```
