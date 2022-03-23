@@ -1,5 +1,6 @@
 ---
 title: "Citation Graphs"
+output: pdf_document
 ---
 
 ```{r setup, echo = F,include=FALSE}
@@ -181,12 +182,14 @@ singlePubs750 <- facultyPubs %>%
   select(Name, title, journal, cites, year)%>%
   arrange(desc(cites))
 
-knitr::kable(singlePubs750, format = "html")%>%
-  kableExtra::kable_styling(full_width = T)
+#knitr::kable(singlePubs750, format = "html")%>%
+#  kableExtra::kable_styling(full_width = T)
 
 # If you want the latex code for these 
 # uncomment the following line
-#knitr::kable(singlePubs750, format = "html")
+knitr::kable(singlePubs750, format = "latex")%>%
+  kableExtra::kable_styling(latex_options = "HOLD_position")
+
 ```
 
 ### Publications with at least 1000 Citations
@@ -197,10 +200,11 @@ singlePubs1000 <- facultyPubs  %>%
   select(Name, title, journal, cites, year)%>%
   arrange(desc(cites))
 
-knitr::kable(singlePubs1000, format = "html")%>%
-  kableExtra::kable_styling(full_width = T)
+#knitr::kable(singlePubs1000, format = "html")%>%
+#  kableExtra::kable_styling(full_width = T)
 
 # If you want the latex code for these 
 # uncomment the following line
-# knitr::kable(singlePubs1000, format = "latex")
+knitr::kable(singlePubs1000, format = "latex")%>%
+  kableExtra::kable_styling(latex_options = "HOLD_position")
 ```
